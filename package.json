@@ -17,3 +17,7 @@
   },
   "description": ""
 }
+"scripts": {
+  "start": "node bot.js && node server.js"
+}
+
