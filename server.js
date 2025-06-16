@@ -38,3 +38,6 @@ app.post("/roblox", (req, res) => {
 app.listen(PORT, () => {
 	console.log(`🌐 Server is running on http://localhost:${PORT}`);
 });
+app.get("/test", (req, res) => {
+  res.send("🟢 Сервер работает");
+});
