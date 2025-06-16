@@ -16,8 +16,4 @@
     "node-telegram-bot-api": "^0.66.0"
   },
   "description": ""
-}
-"scripts": {
-  "start": "node bot.js && node server.js"
-}
 
