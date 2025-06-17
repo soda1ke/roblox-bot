@@ -41,3 +41,17 @@ app.listen(PORT, () => {
 app.get("/test", (req, res) => {
   res.send("🟢 Сервер работает");
 });
+app.get("/force", (req, res) => {
+  try {
+    const raw = req.query.data;
+    const data = JSON.parse(raw);
+    if (data && data.action && data.playerName) {
+      latestCommand = data;
+      res.send("✅ Команда принята");
+    } else {
+      res.status(400).send("❌ Неполные данные");
+    }
+  } catch (err) {
+    res.status(500).send("❌ Ошибка парсинга JSON");
+  }
+});
