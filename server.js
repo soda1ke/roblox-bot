@@ -1,28 +1,19 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
-process.env.BOT_TOKEN = "7685580414:AAESieIhpTYC4cqu4rlsylautq99bA-W8Vg";
+const axios = require("axios");
+
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+
+process.env.BOT_TOKEN = "7685580414:AAESieIhpTYC4cqu4rlsylautq99bA-W8Vg";
 
 app.use(cors());
 app.use(bodyParser.json());
 
-let lastCommand = null; // Здесь храним последнюю команду от Telegram
+let commandsQueue = []; // очередь команд от Telegram
 
-// Получение команды Roblox Studio
-app.get("/roblox", (req, res) => {
-	if (lastCommand) {
-		const commandToSend = { ...lastCommand };
-		lastCommand = null; // Очистить после отправки
-		console.log("✅ Команда отправлена в Roblox:", commandToSend);
-		res.json(commandToSend);
-	} else {
-		res.status(204).send(); // Нет команды
-	}
-});
-
-// Получение команды от Telegram-бота
+// 📥 Получение команды от Telegram (POST)
 app.post("/roblox", (req, res) => {
 	const { action, playerName, reason } = req.body;
 
@@ -30,56 +21,60 @@ app.post("/roblox", (req, res) => {
 		return res.status(400).send("❌ Не хватает параметров");
 	}
 
-	lastCommand = { action, playerName, reason };
-	console.log("📥 Получена команда от Telegram:", lastCommand);
+	commandsQueue.push({ type: action, username: playerName, reason: reason || "Без причины" });
+	console.log("📥 Получена команда от Telegram:", commandsQueue[commandsQueue.length - 1]);
+
 	res.send("✅ Команда сохранена");
 });
-// Получение callback-запросов от Telegram кнопок
-app.post("/telegram", (req, res) => {
-  const body = req.body;
 
-  if (body.callback_query) {
-    const data = body.callback_query.data;
-    const callbackId = body.callback_query.id;
+// 🤖 Кнопки Telegram (POST)
+app.post("/telegram", async (req, res) => {
+	const body = req.body;
 
-    const [action, playerName] = data.split("_");
-    const reason = "Из Telegram"; // или жди причины позже
+	if (body.callback_query) {
+		const data = body.callback_query.data;
+		const callbackId = body.callback_query.id;
 
-    // Сохраняем команду
-    lastCommand = { action, playerName, reason };
-    console.log("📩 Получена команда от кнопки Telegram:", lastCommand);
+		const [action, playerName] = data.split("_");
+		const reason = "Из Telegram";
 
-    // Ответить Telegram, чтобы убрать «загрузка» у кнопки
-    const axios = require("axios");
-    axios.post(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/answerCallbackQuery`, {
-      callback_query_id: callbackId,
-      text: `✅ Команда ${action} отправлена`,
-      show_alert: false
-    }).catch(console.error);
+		commandsQueue.push({ type: action, username: playerName, reason });
+		console.log("📩 Команда от кнопки Telegram:", { action, playerName, reason });
 
-    return res.send("ok");
-  }
+		// Ответ на callback Telegram
+		try {
+			await axios.post(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/answerCallbackQuery`, {
+				callback_query_id: callbackId,
+				text: `✅ Команда ${action} отправлена`,
+				show_alert: false
+			});
+		} catch (err) {
+			console.error("❌ Ошибка Telegram callback:", err.message);
+		}
 
-  res.sendStatus(200);
+		return res.send("ok");
+	}
+
+	res.sendStatus(200);
+});
+
+// 📤 Roblox получает команду (GET)
+app.get("/commands", (req, res) => {
+	if (commandsQueue.length === 0) {
+		return res.json([]);
+	}
+
+	const toSend = [...commandsQueue];
+	commandsQueue = []; // очистка очереди
+	console.log("✅ Отправлены команды в Roblox:", toSend);
+	res.json(toSend);
+});
+
+// 🔍 Тестовый маршрут
+app.get("/test", (req, res) => {
+	res.send("🟢 Сервер работает");
 });
 
 app.listen(PORT, () => {
 	console.log(`🌐 Server is running on http://localhost:${PORT}`);
-});
-app.get("/test", (req, res) => {
-  res.send("🟢 Сервер работает");
-});
-app.get("/force", (req, res) => {
-  try {
-    const raw = req.query.data;
-    const data = JSON.parse(raw);
-    if (data && data.action && data.playerName) {
-      latestCommand = data;
-      res.send("✅ Команда принята");
-    } else {
-      res.status(400).send("❌ Неполные данные");
-    }
-  } catch (err) {
-    res.status(500).send("❌ Ошибка парсинга JSON");
-  }
 });
