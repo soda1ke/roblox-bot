@@ -1,33 +1,39 @@
 const express = require("express");
+const bodyParser = require("body-parser");
 const app = express();
 const port = process.env.PORT || 10000;
 
-let latestCommand = null;
+app.use(bodyParser.json());
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+let commandsQueue = []; // очередь команд
 
-// 👂 Обработка запроса от Roblox (GET) и отдача команды
 app.get("/", (req, res) => {
-  if (req.query.data) {
-    try {
-      const data = JSON.parse(req.query.data);
-      latestCommand = data;
-      console.log("📥 Получена команда от Telegram:", data);
-      res.send("✅ Команда получена");
-    } catch (err) {
-      console.error("❌ Ошибка JSON:", err);
-      res.status(400).send("Неверный JSON в параметре data");
-    }
-  } else if (latestCommand) {
-    res.json(latestCommand);
-    latestCommand = null;
-  } else {
+  if (commandsQueue.length === 0) {
     res.send("none");
+  } else {
+    const command = commandsQueue.shift(); // берём и удаляем первую команду
+    res.json(command);
   }
 });
 
-// ✅ Запуск
+app.post("/roblox", (req, res) => {
+  const { action, playerName, reason } = req.body;
+
+  if (!action || !playerName) {
+    return res.status(400).send("Missing action or playerName");
+  }
+
+  // Добавляем команду в очередь
+  commandsQueue.push({
+    type: action,
+    username: playerName,
+    reason: reason || "Без причины",
+  });
+
+  console.log("✅ Получена команда от Telegram:", action, playerName, reason);
+  res.send("OK");
+});
+
 app.listen(port, () => {
   console.log(`🌐 Server is running on http://localhost:${port}`);
 });
