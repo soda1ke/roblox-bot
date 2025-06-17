@@ -5,13 +5,13 @@ const port = process.env.PORT || 10000;
 
 app.use(bodyParser.json());
 
-let commandsQueue = []; // очередь команд
+let commandsQueue = [];
 
 app.get("/", (req, res) => {
   if (commandsQueue.length === 0) {
     res.send("none");
   } else {
-    const command = commandsQueue.shift(); // берём и удаляем первую команду
+    const command = commandsQueue.shift();
     res.json(command);
   }
 });
@@ -23,14 +23,12 @@ app.post("/roblox", (req, res) => {
     return res.status(400).send("Missing action or playerName");
   }
 
-  // Добавляем команду в очередь
   commandsQueue.push({
     type: action,
     username: playerName,
     reason: reason || "Без причины",
   });
 
-  console.log("✅ Получена команда от Telegram:", action, playerName, reason);
   res.send("OK");
 });
 
