@@ -1,7 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
-
+process.env.BOT_TOKEN = "7685580414:AAESieIhpTYC4cqu4rlsylautq99bA-W8Vg";
 const app = express();
 const PORT = 3000;
 
@@ -33,6 +33,34 @@ app.post("/roblox", (req, res) => {
 	lastCommand = { action, playerName, reason };
 	console.log("📥 Получена команда от Telegram:", lastCommand);
 	res.send("✅ Команда сохранена");
+});
+// Получение callback-запросов от Telegram кнопок
+app.post("/telegram", (req, res) => {
+  const body = req.body;
+
+  if (body.callback_query) {
+    const data = body.callback_query.data;
+    const callbackId = body.callback_query.id;
+
+    const [action, playerName] = data.split("_");
+    const reason = "Из Telegram"; // или жди причины позже
+
+    // Сохраняем команду
+    lastCommand = { action, playerName, reason };
+    console.log("📩 Получена команда от кнопки Telegram:", lastCommand);
+
+    // Ответить Telegram, чтобы убрать «загрузка» у кнопки
+    const axios = require("axios");
+    axios.post(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/answerCallbackQuery`, {
+      callback_query_id: callbackId,
+      text: `✅ Команда ${action} отправлена`,
+      show_alert: false
+    }).catch(console.error);
+
+    return res.send("ok");
+  }
+
+  res.sendStatus(200);
 });
 
 app.listen(PORT, () => {
