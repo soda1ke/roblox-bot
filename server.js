@@ -7,7 +7,7 @@ let pendingCommand = null;
 
 app.use(bodyParser.json());
 
-// Telegram Webhook
+// 📥 Получение команды от Telegram
 app.post('/telegram', (req, res) => {
     const msg = req.body.message;
     if (!msg || !msg.text) return res.sendStatus(200);
@@ -17,19 +17,20 @@ app.post('/telegram', (req, res) => {
 
     if (["/kick", "/ban", "/unban"].includes(cmd) && username) {
         pendingCommand = {
-            action: cmd.slice(1), // 'kick' from '/kick'
+            action: cmd.slice(1), // Убираем "/"
             username,
             reason
         };
-        console.log("✅ Получена команда:", pendingCommand);
+        console.log("📬 Команда получена:", pendingCommand);
     }
 
     res.sendStatus(200);
 });
 
-// Roblox GET
+// 📤 Roblox спрашивает команду
 app.get('/', (req, res) => {
     if (pendingCommand) {
+        console.log("📤 Команда отправлена Roblox:", pendingCommand);
         res.json(pendingCommand);
         pendingCommand = null;
     } else {
@@ -38,5 +39,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🌐 Server running at http://localhost:${PORT}`);
+    console.log(`✅ Сервер запущен: http://localhost:${PORT}`);
 });
